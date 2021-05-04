@@ -1,6 +1,7 @@
 import json
 import os
 import string, random
+import bcrypt
 from db import db
 from db import User, PublicList, PrivateList, Event, Image
 from flask import Flask
@@ -11,7 +12,7 @@ db_filename = "cms.db"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ECHO"] = True
+app.config["SQLALCHEMY_ECHO"] = False
 
 db.init_app(app)
 with app.app_context():
@@ -41,6 +42,8 @@ def register():
     password = body.get('password')
     if password is None:
         return failure_response("no password entered")
+    salt = bcrypt.gensalt()
+    password = bcrypt.hashpw(password.encode('utf-8'), salt)
     uid = ''.join(random.sample(string.digits, 8))
     possible_user = User.query.filter_by(uid=uid).first()
     while possible_user is not None:
@@ -66,7 +69,8 @@ def login():
     user = User.query.filter_by(uid=uid).first()
     if user is None:
         return failure_response("user not found!")
-    if user.password != password:
+    if not bcrypt.checkpw(password.encode('utf-8'), user.password):
+    # if user.password != password:
         return failure_response("password incorrect!")
 
 
@@ -93,13 +97,56 @@ def get_list_by_id(uid, list_id):
     user = User.query.filter_by(id=uid).first()
     if user is None:
         return failure_response("user not found!")
-    public_list = User.public_lists.query.filter_by(id=list_id).first()
+    public_list = user.public_lists.query.filter_by(id=list_id).first()
     return success_response(public_list.serialize())
 
+@app.route("/api/<string:uid/lists/<int:list_id>/events/", methods=["POST"])
+def create_event(uid, list_id):
+    user = User.query(filter_by(id=uid).first()
+    if user is None:
+        return failure_response("user not found!")
+    public_list = user.public_lists.query.filter_by(id=list_id).first()
+    if public_list is None:
+        return failure_response("list not found!")
+    body = json.loads(request.data.decode())
+    company = body.get('company')
+    position = body.get('position')
+    reminder = body.get('reminder')
+    if not company or not position or not reminder:
+        return failure_response("missing field(s)!")
+    event = Event(company=company, position=position, reminder=reminder)
+    public_list.append(event)
+    return success_response(event.serialize())
 
 @app.route("/api/<string:uid>/lists/<int:list_id>/<int:event_id>")
 def get_event_by_id(uid, list_id, event_id):
+    user = User.query.filter_by(id=uid).first()
+    if user is None: 
+        return failure_response("user not found!")
+    event_list = user.public_lists.query.filter_by(id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+            return failure_response("list not found!")
+    return success_response(event.serialize())
 
+@app.route("/api/<string:uid>/lists/<int:list_id>/<int:event_id>", methods=["POST"])
+def edit_event_by_id(uid, list_id, event_id):
+    user = User.query.filter_by(id=uid).first()
+    if user is None: 
+        return failure_response("user not found!")
+    event_list = user.public_lists.query.filter_by(id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+            return failure_response("list not found!")
+    body = json.loads(request.data.decode())
+    event.company = body.get('company', event.company)
+    event.position = body.get('position', event.position)
+    event.reminder = body.get('reminder', event.reminder)
+    db.sesssion.commit()
 
 
 # 添加好友

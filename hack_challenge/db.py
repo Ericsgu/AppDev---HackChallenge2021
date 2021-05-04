@@ -111,11 +111,18 @@ class Event(db.Model):
     position = db.Column(db.String, nullable=False)
     reminder = db.Column(db.String, nullable=False)
 
+    def __init__(self, **kwargs):
+        self.company = kwargs.get('company')
+        self.position = kwargs.get('position')
+        self.reminder = kwargs.get('reminder')
+    
+    def serialize(self):
+        return {
+            "id": self.id,
+            "company": self.company,
+            "position": self.position,
+        }
 
 class Image(db.Model):
     __tablename__ = "images"
     id = db.Column(db.Integer, primary_key=True)
-
-
-
-
