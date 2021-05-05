@@ -1,7 +1,7 @@
 import json
 import os
 import string, random
-import bcrypt
+import hashlib
 from db import db, User, PublicList, Event, Image, User_PublicList_Association
 from flask import Flask
 from flask import request
@@ -41,8 +41,8 @@ def register():
     password = body.get('password')
     if password is None:
         return failure_response("no password entered")
-    salt = bcrypt.gensalt()
-    password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    salt = os.urandom(32)
+    password = salt + hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     uid = ''.join(random.sample(string.digits, 8))
     possible_user = User.query.filter_by(uid=uid).first()
     while possible_user is not None:
@@ -69,7 +69,9 @@ def login():
     user = User.query.filter_by(uid=uid).first()
     if user is None:
         return failure_response("user not found!")
-    if user.password != password:
+    salt = user.password[:32]
+    check_pw = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    if user.password[32:] != check_pw:
         return failure_response("password incorrect!")
 
 
