@@ -2,8 +2,7 @@ import json
 import os
 import string, random
 import bcrypt
-from db import db
-from db import User, PublicList, PrivateList, Event, Image
+from db import db, User, PublicList, Event, Image, User_PublicList_Association
 from flask import Flask
 from flask import request
 
@@ -12,7 +11,7 @@ db_filename = "cms.db"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ECHO"] = False
+app.config["SQLALCHEMY_ECHO"] = True
 
 db.init_app(app)
 with app.app_context():
@@ -56,6 +55,7 @@ def register():
     return success_response("successfully registered!")
 
 
+
 # 登录
 @app.route("/api/login/", methods=['POST'])
 def login():
@@ -69,8 +69,7 @@ def login():
     user = User.query.filter_by(uid=uid).first()
     if user is None:
         return failure_response("user not found!")
-    if not bcrypt.checkpw(password.encode('utf-8'), user.password):
-    # if user.password != password:
+    if user.password != password:
         return failure_response("password incorrect!")
 
 
@@ -78,15 +77,17 @@ def login():
 @app.route("/api/<string:uid>/friends_lists/")
 def get_friends_lists(uid):
     user = User.query.filter_by(id=uid).first()
+    
     if user is None:
         return failure_response("user not found!")
-    return success_response([c.serialize() for c in User.sharing_lists.query.all()])
+    friends = user.friends
+    return success_response([lst.serialize() for f in friends for lst in f.public_lists if lst.is_public])
 
 
 # 查看自己的lists
-@app.route("/api/<string:uid>/lists/")
-def get_lists(uid):
-    user = User.query.filter_by(id=uid).first()
+@app.route("/api/<int:id>/lists/")
+def get_lists(id):
+    user = User.query.filter_by(id=id).first()
     if user is None:
         return failure_response("user not found!")
     return success_response([c.serialize() for c in User.public_lists.query.all()])
@@ -97,33 +98,63 @@ def get_list_by_id(uid, list_id):
     user = User.query.filter_by(id=uid).first()
     if user is None:
         return failure_response("user not found!")
-    public_list = user.public_lists.query.filter_by(id=list_id).first()
+    public_list = User.public_lists.query.filter_by(public_list_id=list_id).first()
     return success_response(public_list.serialize())
 
-@app.route("/api/<string:uid/lists/<int:list_id>/events/", methods=["POST"])
-def create_event(uid, list_id):
-    user = User.query(filter_by(id=uid).first()
+@app.route("/api/<int:userid>/lists/", methods=['POST'])
+def create_list(userid):
+    body = json.loads(request.data.decode())
+    list_name = body.get('listname')
+    is_public = body.get('is_public')
+    if is_public is None or list_name is None:
+        return failure_response("Please provide access information/name of list")
+    user = User.query.filter_by(id=userid).first()
     if user is None:
         return failure_response("user not found!")
-    public_list = user.public_lists.query.filter_by(id=list_id).first()
+    new_list = PublicList(listname=list_name, publisher_id=userid)
+    db.session.add(new_list)
+    db.session.commit()
+    association = User_PublicList_Association(is_public=is_public)
+    association.public_list = new_list
+    user.public_lists.append(association)
+    db.session.add(association)
+    db.session.commit()
+
+
+@app.route("/api/<string:uid/lists/<int:list_id>/events/", methods=['POST'])
+def create_event(list_id):
+    public_list = PublicList.query.filter_by(id=list_id).first()
     if public_list is None:
-        return failure_response("list not found!")
-    body = json.loads(request.data.decode())
-    company = body.get('company')
-    position = body.get('position')
-    reminder = body.get('reminder')
-    if not company or not position or not reminder:
-        return failure_response("missing field(s)!")
-    event = Event(company=company, position=position, reminder=reminder)
-    public_list.append(event)
-    return success_response(event.serialize())
+        return failure_response('list not found!')
+    
+    body = json.loads(request.data)
+    title = body.get('title')
+    description = body.get('description')
+    event_time = body.get('event_time')
+    
+    if title is None or description is None or event_time is None:
+        return failure_response('Please provide titile, description, and time')
+    
+    new_event = Event(
+        title = title,
+        description = description,
+        public_list_id = list_id,
+        event_time = event_time
+    )
+    #new_assignment.course = course
+    public_list.events.append(new_event)
+    db.session.add(new_event)
+    db.session.commit()
+    return success_response(new_event.serialize(), 201)
+
+
 
 @app.route("/api/<string:uid>/lists/<int:list_id>/<int:event_id>")
 def get_event_by_id(uid, list_id, event_id):
     user = User.query.filter_by(id=uid).first()
     if user is None: 
         return failure_response("user not found!")
-    event_list = user.public_lists.query.filter_by(id = list_id).first()
+    event_list = user.public_lists.query.filter_by(public_list_id = list_id).first()
     if event_list is None:
         return failure_response("list not found!")
     event = event_list.events.filter_by(id = event_id).first()
@@ -136,16 +167,16 @@ def edit_event_by_id(uid, list_id, event_id):
     user = User.query.filter_by(id=uid).first()
     if user is None: 
         return failure_response("user not found!")
-    event_list = user.public_lists.query.filter_by(id = list_id).first()
+    event_list = user.public_lists.query.filter_by(public_list_id = list_id).first()
     if event_list is None:
         return failure_response("list not found!")
     event = event_list.events.filter_by(id = event_id).first()
     if event is None:
             return failure_response("list not found!")
     body = json.loads(request.data.decode())
-    event.company = body.get('company', event.company)
-    event.position = body.get('position', event.position)
-    event.reminder = body.get('reminder', event.reminder)
+    event.title = body.get('title', event.title)
+    event.description = body.get('description', event.description)
+    event.event_time = body.get('event_time', event.event_time)
     db.sesssion.commit()
 
 
