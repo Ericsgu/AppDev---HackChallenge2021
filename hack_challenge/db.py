@@ -31,21 +31,21 @@ class User(db.Model):
     password = db.Column(db.String(128), nullable=False)
     public_lists = db.relationship("User_PublicList_Association", back_populates="user")
     
-    # 已有好友
-    friends = db.relationship(
-        'User',
-        secondary=friends_association,
-        primaryjoin=(applying_friends_association.user_id1 == id),
-        secondaryjoin=(applying_friends_association.user_id2 == id),
-        lazy='dynamic',
-        backref=db.backref('applying_friends_association', lazy='dynamic')
-    )
     # 好友申请
     applying_friends = db.relationship(
         'User',
         secondary=friends_association,
-        primaryjoin=(friends_association.user_id1 == id),  # 多对多中）用于从子对象查询其父对象的 condition（child.parents）
-        secondaryjoin=(friends_association.user_id2 == id),  # 多对多中）用于从父对象查询其所有子对象的 condition（parent.children）
+        primaryjoin=(applying_friends_association.c.user_id1 == id),
+        secondaryjoin=(applying_friends_association.c.user_id2 == id),
+        lazy='dynamic',
+        backref=db.backref('applying_friends_association', lazy='dynamic')
+    )
+    # 已有好友
+    friends = db.relationship(
+        'User',
+        secondary=friends_association,
+        primaryjoin=(friends_association.c.user_id1 == id),  # 多对多中）用于从子对象查询其父对象的 condition（child.parents）
+        secondaryjoin=(friends_association.c.user_id2 == id),  # 多对多中）用于从父对象查询其所有子对象的 condition（parent.children）
         lazy='dynamic',  # 延迟求值，这样才能用 filter_by 等过滤函数
         backref=db.backref('friends_association', lazy='dynamic')
     )
@@ -98,24 +98,22 @@ class User_PublicList_Association(db.Model):
 class Event(db.Model):
     __tablename__ = "event"
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String, nullable=False)
-    event_time = db.Column(db.DateTime, nullable=False)
-    description = db.Column(db.String, nullable=False)
+    company = db.Column(db.String, nullable=False)
+    position = db.Column(db.String, nullable=False)
+    reminder = db.Column(db.String, nullable=False)
     public_list_id = db.Column(db.Integer, db.ForeignKey('public_list.id'))
-    
     def __init__(self, **kwargs):
-        self.title = kwargs.get('title')
-        self.description = kwargs.get('description')
-        self.event_time = kwargs.get('event_time')
+        self.company = kwargs.get('company')
+        self.position = kwargs.get('position')
+        self.reminder = kwargs.get('reminder')
         self.public_list_id=kwargs.get('public_list_id')
-    
     def serialize(self):
         return {
-            'id':self.id,
-            'title': self.title,
-            'description': self.description,
-            'event_time': self.event_time
+            "id": self.id,
+            "company": self.company,
+            "position": self.position,
         }
+
 
 class Image(db.Model):
     __tablename__ = "images"

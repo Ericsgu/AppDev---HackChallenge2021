@@ -26,11 +26,6 @@ def failure_response(message, code=404):
     return json.dumps({"success": False, "error": message}), code
 
 
-@app.route("/api/courses/")
-def get_lists():
-    return success_response([c.serialize() for c in PublicList.query.all()])
-
-
 # 注册 需要跳转到登录界面
 @app.route("/api/register/")
 def register():
@@ -122,28 +117,19 @@ def create_list(userid):
     db.session.add(association)
     db.session.commit()
 
-
-@app.route("/api/<string:uid/lists/<int:list_id>/events/", methods=['POST'])
-def create_event(list_id):
+@app.route("/api/<string:uid>/lists/<int:list_id>/events/", methods=["POST"])
+def create_event(uid, list_id):
     public_list = PublicList.query.filter_by(id=list_id).first()
     if public_list is None:
         return failure_response('list not found!')
     
-    body = json.loads(request.data)
-    title = body.get('title')
-    description = body.get('description')
-    event_time = body.get('event_time')
-    
-    if title is None or description is None or event_time is None:
-        return failure_response('Please provide titile, description, and time')
-    
-    new_event = Event(
-        title = title,
-        description = description,
-        public_list_id = list_id,
-        event_time = event_time
-    )
-    #new_assignment.course = course
+    body = json.loads(request.data.decode())
+    company = body.get('company')
+    position = body.get('position')
+    reminder = body.get('reminder')
+    if not company or not position or not reminder:
+        return failure_response("missing field(s)!")
+    new_event = Event(company=company, position=position, reminder=reminder, public_list_id = list_id)
     public_list.events.append(new_event)
     db.session.add(new_event)
     db.session.commit()
