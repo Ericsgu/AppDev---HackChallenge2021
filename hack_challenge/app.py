@@ -162,9 +162,9 @@ def edit_event_by_id(uid, list_id, event_id):
     if event is None:
             return failure_response("list not found!")
     body = json.loads(request.data.decode())
-    event.title = body.get('title', event.title)
-    event.description = body.get('description', event.description)
-    event.event_time = body.get('event_time', event.event_time)
+    event.company = body.get('company', event.company)
+    event.position = body.get('position', event.position)
+    event.reminder = body.get('reminder', event.reminder)
     db.sesssion.commit()
 
 
