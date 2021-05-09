@@ -4,6 +4,7 @@ db = SQLAlchemy()
 
 
 
+
 # user 2 user
 friends_association = db.Table(
     'friends',
@@ -22,6 +23,65 @@ list_events_association_table = db.Table(
     db.Column('list_id', db.Integer, db.ForeignKey('public_list.id')),
     db.Column('event_id', db.Integer, db.ForeignKey('event.id'))
 )
+
+# Testing association object for many-to-many relationship
+class UserList(Base):
+    __tablename__ = 'UserList'
+    left_id = db.Column(db.Integer, ForeignKey('user.id'), primary_key=True)
+    right_id = db.Column(db.Integer, ForeignKey('list.id'), primary_key=True)
+    extra_data = db.Column(db.Boolean)
+    user = db.relationship('User', back_populates='lists')
+    list = db.relationship('List', back_populate='users')
+
+class UserFriend(Base):
+    __tablename__ = 'UserFriend'
+    left_id = db.Column(db.Integer, ForeignKey('user.id'), primary_key=True)
+    right_id = db.Column(db.Integer, ForeignKey('friend.id'), primary_key=True)
+    extra_data = db.Column(db.String, nullable=False)
+    user = db.relationship('User', back_populates='friends')
+    friend = db.relationship('Friend', back_populates='users')
+
+
+class User(Base):
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    password = db.Column(db.String(128), nullable=False)
+    lists = db.relationship('UserList', back_populates='user')
+    friends = db.relationship('UserFriend', back_populates='user')
+
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name')
+        self.password = kwargs.get('password')
+    
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "lists": [l.serialize() for l in self.lists if l.extra_data],
+            friends = [f.serialize() for f in self.friends if f.extra_data == 'accepted']
+        }
+    
+
+class List(Base):
+    __tablename__ = 'list'
+    id = db.Column(db.Integer, primary_key=True)
+    listName = db.Column(db.String, nullable=False)
+    events = db.relationship("ListEvent", cascade="delete")
+    users = db.relationship('UserList', back_populates='list')
+
+class ListEvent(Base):
+    __tablename__ = 'ListEvent'
+    left_id = db.Column(db.Integer, ForeignKey('list.id'), primary_key=True)
+    right_id = db.Column(db.Integer, ForeignKey('event.id'), primary_key=True)
+    event = db.relationship('Event')
+
+class Event(Base): 
+    __tablename__ = 'event'
+    id = db.Column(db.Integer, primary_key=True)
+    company = db.Column(db.String, nullable=False)
+    position = db.Column(db.String, nullable=False)
+    date = db.Column(db.Datetime, nullable=False)
 
 class User(db.Model):
     __tablename__ = "user"
