@@ -65,13 +65,13 @@ Response
   "success": true,
   "data": [
     {
-      "friends": [<SERIALIZED FRIENDS>]
+      "friends": [<SERIALIZED FRIEND>, ...]
     }
   ]
 }
 ```
 
-### 4) Get All the User's Lists
+### 4) Get User's Lists
 
 <code>GET</code> /api/{id}/lists/
 
@@ -81,13 +81,13 @@ Response
   "success": true,
   "data": [
     {
-      "lists": [<SERIALIZED LISTS>]
+      "lists": [<SERIALIZED LIST>, ...]
     }
   ]
 }
 ```
 
-### 5) Get User's List by List ID
+### 5) Get Specific List by List ID
 
 <code>GET</code> /api/{id}/lists/{list_id}/
 
@@ -100,7 +100,7 @@ Response
      "id": <ID>,
      "list_name": <USER INPUT>, 
      "is_public": <USER INPUT>,
-     "events": [<SERIALIZED EVENTS>]    
+     "events": [<SERIALIZED EVENT>, ...]    
      }
   ]
 }
@@ -108,7 +108,7 @@ Response
 
 ### 6) Create a List
 
-<code>POST</code> /api/{int}/lists/
+<code>POST</code> /api/{id}/lists/
 
 Request
 ```
@@ -178,8 +178,7 @@ Response
 }
 ```
 
-### 9) Add a Friend
-Send a friend request to the user whose ID is in the body.
+### 9) Send a Friend Request
 
 <code>POST</code> /api/{id}/friends/add/
 
@@ -197,8 +196,8 @@ Response
     {
       "id": <ID>,
       "name": <NAME>,
-      "friends": [<SERIALIZED FRIENDS>],
-      "public_lists": [<SERIALIZED PUBLIC LISTS>]
+      "friends": [<SERIALIZED FRIEND>, ...],
+      "public_lists": [<SERIALIZED PUBLIC LIST>, ...]
     }
   ]
 }
@@ -216,8 +215,8 @@ Response
     {
       "id": <ID>,
       "name": <NAME>,
-      "friends": [<SERIALIZED FRIENDS>],
-      "public_lists": [<SERIALIZED PUBLIC LISTS>]
+      "friends": [<SERIALIZED FRIEND>, ...],
+      "public_lists": [<SERIALIZED PUBLIC LIST>, ...]
     }
   ]
 }
@@ -235,8 +234,24 @@ Response
     {
       "id": <ID>,
       "name": <NAME>,
-      "friends": [<SERIALIZED FRIENDS>],
-      "public_lists": [<SERIALIZED PUBLIC LISTS>]
+      "friends": [<SERIALIZED FRIEND>, ...],
+      "public_lists": [<SERIALIZED PUBLIC LIST>, ...]
+    }
+  ]
+}
+```
+
+### 12) Get Pending Requests
+
+<code>GET</code> /api/{id}/friends/requests/
+
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+      "requests": [<SERIALIZED FRIEND>, ...]
     }
   ]
 }
