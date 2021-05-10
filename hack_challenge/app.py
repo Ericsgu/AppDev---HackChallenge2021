@@ -70,7 +70,7 @@ def get_friends_lists(id):
     if user is None:
         return failure_response("user not found!")
     # friends = user.friends
-    return success_response([f.serialize() for f in user.friends_association])
+    return success_response({"friends": [f.serialize() for f in user.friends_association]})
     # return success_response([lst.serialize() for f in friends for lst in f.public_lists if lst.is_public])
 
 @app.route("/api/<int:id>/lists/")
@@ -78,7 +78,7 @@ def get_lists(id):
     user = User.query.filter_by(id=id).first()
     if user is None:
         return failure_response("user not found!")
-    return success_response([c.serialize() for c in user.public_lists if c.is_public])
+    return success_response({"lists": [c.serialize() for c in user.public_lists if c.is_public]})
 
 @app.route("/api/<int:id>/lists/<int:list_id>/")
 def get_list_by_id(id, list_id):
@@ -102,7 +102,6 @@ def create_list(id):
         return failure_response("user not found!")
     new_list = PublicList(list_name=list_name, publisher_id=id)
     db.session.add(new_list)
-    # db.session.commit()
     association = User_PublicList_Association(user_id=id, is_public=is_public)
     association.public_list = new_list
     user.public_lists.append(association)
@@ -170,17 +169,22 @@ def add_friend(id):
     search_id = body.get('id')
     if search_id is None:
         return failure_response("no id entered")
+    if id == search_id:
+        return failure_response("cannot send a request to yourself!")
     search_user = User.query.filter_by(id=search_id).first()
     if search_user is None:
         return failure_response("user not found!")
-    already_friend = user.friends_association.filter_by(id=search_id).first()
+    already_friend = user.friends.filter_by(id=search_id).first()
     if already_friend is not None:
         return failure_response("you already added this user!")
+    already_request = user.applying_friends.filter_by(id=search_id).first()
+    if already_request is not None:
+        return failure_response("you already have a pending response!")
     search_user.applying_friends.append(user)
     db.session.commit()
-    return success_response("successfully applied!")
+    return success_response(search_user.serialize())
 
-@app.route("/api/<int:id>/friends/accept/<int:friend_id>/")
+@app.route("/api/<int:id>/friends/accept/<int:friend_id>/", methods=["POST"])
 def accept_friend_request(id, friend_id):
     user = User.query.filter_by(id=id).first()
     if user is None:
@@ -188,18 +192,15 @@ def accept_friend_request(id, friend_id):
     friend = User.query.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("friend user not found!")
-    friend = user.applying_friends_association.filter_by(id=friend_id).first()
+    friend = user.applying_friends.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("this user does not have a pending request!")
-    if user.friends_association.filter_by(id=friend_id).first() is not None:
-        return failure_response("this request has already been accepted!")
     user.friends.append(friend)
     user.applying_friends.remove(friend)
-    db.session.add(friend)
     db.session.commit()
-    return success_response("friend request accepted!")
+    return success_response(friend.serialize())
 
-@app.route("/api/<int:id>/friends/reject/<int:friend_id>/")
+@app.route("/api/<int:id>/friends/reject/<int:friend_id>/", methods=["POST"])
 def reject_friend_request(id, friend_id):
     user = User.query.filter_by(id=id).first()
     if user is None:
@@ -207,13 +208,19 @@ def reject_friend_request(id, friend_id):
     friend = User.query.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("friend user not found!")
-    friend = user.applying_friends_association.filter_by(id=friend_id).first()
+    friend = user.applying_friends.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("this user does not have a pending request!")
     user.applying_friends.remove(friend)
-    db.session.add(friend)
     db.session.commit()
-    return success_response("friend request rejected!")
+    return success_response(friend.serialize())
+
+@app.route("/api/<int:id>/friends/requests/")
+def get_requests(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        return failure_response("user not found!")
+    return success_response({"requests": [f.serialize() for f in user.applying_friends]})
 
 if __name__ == "__main__":
     port = os.environ.get('PORT', 5000)

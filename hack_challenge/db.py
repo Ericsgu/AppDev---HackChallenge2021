@@ -2,7 +2,6 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-# user 2 user
 friends_association = db.Table(
     'friends',
     db.Column('user_id1', db.Integer, db.ForeignKey('user.id'), primary_key=True),
