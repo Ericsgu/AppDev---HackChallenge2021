@@ -34,6 +34,7 @@ def register():
         return failure_response("no password entered")
     salt = os.urandom(32)
     password = salt + hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+<<<<<<< Updated upstream
     # uid = ''.join(random.sample(string.digits, 8))
     # possible_user = User.query.filter_by(uid=uid).first()
     # while possible_user is not None:
@@ -42,6 +43,15 @@ def register():
     # new_user = User(name=name, password=password, uid=uid, public_lists=[], private_lists=[], sharing_lists=[],
     #                 friends=[])
     new_user = User(name=name, password=password)
+=======
+    uid = ''.join(random.sample(string.digits, 8))
+    possible_user = User.query.filter_by(uid=uid).first()
+    while possible_user is not None:
+        uid = ''.join(random.sample(string.digits, 8))
+        possible_user = User.query.filter_by(uid=uid).first()
+    new_user = User(name=name, password=password, uid=uid, public_lists=[], private_lists=[], sharing_lists=[],
+                    friends=[])
+>>>>>>> Stashed changes
     db.session.add(new_user)
     db.session.commit()
     return success_response(new_user.serialize(), 201)
