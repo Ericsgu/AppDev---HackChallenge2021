@@ -69,7 +69,7 @@ def get_friends_lists(id):
     user = User.query.filter_by(id=id).first()
     if user is None:
         return failure_response("user not found!")
-    return success_response({"friends": [f.serialize() for f in user.friends_association]})
+    return success_response({"friends": [f.serialize() for f in user.friends]})
     # friends = user.friends
     # return success_response([lst.serialize() for f in friends for lst in f.public_lists if lst.is_public])
 
