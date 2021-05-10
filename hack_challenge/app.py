@@ -1,6 +1,5 @@
 import json
 import os
-import string, random
 import hashlib
 from db import db, User, PublicList, Event, Image, User_PublicList_Association
 from flask import Flask
@@ -11,7 +10,7 @@ db_filename = "letsdoit.db"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ECHO"] = True
+app.config["SQLALCHEMY_ECHO"] = False
 
 db.init_app(app)
 with app.app_context():
@@ -23,6 +22,50 @@ def success_response(data, code=200):
 def failure_response(message, code=404):
     return json.dumps({"success": False, "error": message}), code
 
+def get_user_by_name(name):
+    return User.query.filter_by(name=name).first()
+
+def get_user_by_session_token(session_token):
+    return User.query.filter_by(session_token=session_token).first()
+
+def get_user_by_update_token(update_token):
+    return User.query.filter_by(update_token=update_token).first()
+
+def extract_token(request):
+    auth_header = request.headers.get("Authorization")
+    if auth_header is None:
+        return False, failure_response("missing auth header")
+    bearer_token = auth_header.replace("Bearer ", "").strip()
+    if bearer_token is None or not bearer_token:
+        return False, failure_response("invalid auth header")
+    return True, bearer_token
+
+def check_session(request):
+    success, session_token = extract_token(request)
+    if not success: 
+        return False, session_token
+    user = get_user_by_session_token(session_token)
+    if user is None or not user.verify_session(session_token):
+        return False, failure_response("user not found or your session expired!")
+    return True, user
+
+@app.route("/api/session/", methods=["POST"])
+def update_token():
+    success, update_token = extract_token(request)
+    if not success:
+        return update_token
+    user = get_user_by_update_token(update_token)
+    if user is None:
+        return failure_response("invalid update token: " + update_token)
+    user.renew_session()
+    db.session.commit()
+    return success_response({ 
+        "session_token": user.session_token,
+        "session_expiration": str(user.session_expiration),
+        "update_token": user.update_token
+    })
+
+
 @app.route("/api/register/", methods=["POST"])
 def register():
     body = json.loads(request.data.decode())
@@ -32,19 +75,16 @@ def register():
     password = body.get('password')
     if password is None:
         return failure_response("no password entered")
-    salt = os.urandom(32)
-    password = salt + hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
-    # uid = ''.join(random.sample(string.digits, 8))
-    # possible_user = User.query.filter_by(uid=uid).first()
-    # while possible_user is not None:
-    #     uid = ''.join(random.sample(string.digits, 8))
-    #     possible_user = User.query.filter_by(uid=uid).first()
-    # new_user = User(name=name, password=password, uid=uid, public_lists=[], private_lists=[], sharing_lists=[],
-    #                 friends=[])
+    if get_user_by_name(name) is not None:
+        return failure_response("user already exists!")
     new_user = User(name=name, password=password)
     db.session.add(new_user)
     db.session.commit()
-    return success_response(new_user.serialize(), 201)
+    return success_response({ 
+        "session_token": new_user.session_token,
+        "session_expiration": str(new_user.session_expiration),
+        "update_token": new_user.update_token
+    })
 
 @app.route("/api/login/", methods=['POST'])
 def login():
@@ -55,36 +95,45 @@ def login():
     password = body.get('password')
     if password is None:
         return failure_response("no password entered")
-    user = User.query.filter_by(name=name).first()
+    user = get_user_by_name(name)
     if user is None:
         return failure_response("user not found!")
-    salt = user.password[:32]
-    check_pw = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
-    if user.password[32:] != check_pw:
+    if not user.verify_password(password):
         return failure_response("password incorrect!")
-    return success_response(user.serialize())
+    return success_response({ 
+        "session_token": user.session_token,
+        "session_expiration": str(user.session_expiration),
+        "update_token": user.update_token
+    })
 
 @app.route("/api/<int:id>/friends_lists/")
 def get_friends_lists(id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     return success_response({"friends": [f.serialize() for f in user.friends]})
-    # friends = user.friends
-    # return success_response([lst.serialize() for f in friends for lst in f.public_lists if lst.is_public])
 
 @app.route("/api/<int:id>/lists/")
 def get_lists(id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     return success_response({"lists": [c.serialize() for c in user.public_lists if c.is_public]})
 
 @app.route("/api/<int:id>/lists/<int:list_id>/")
 def get_list_by_id(id, list_id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     public_list = user.public_lists.filter_by(public_list_id=list_id).first()
     if public_list is None:
         return failure_response("list not found!")
@@ -97,9 +146,12 @@ def create_list(id):
     is_public = body.get('is_public')
     if is_public is None or list_name is None:
         return failure_response("Please provide access information/name of list")
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     new_list = PublicList(list_name=list_name, publisher_id=id)
     db.session.add(new_list)
     association = User_PublicList_Association(user_id=id, is_public=is_public)
@@ -111,10 +163,12 @@ def create_list(id):
 
 @app.route("/api/<int:id>/lists/<int:list_id>/events/", methods=["POST"])
 def create_event(id, list_id):
+    success, user = check_session(request)
+    if not success:
+        return user
     public_list = PublicList.query.filter_by(id=list_id).first()
     if public_list is None:
         return failure_response('list not found!')
-    
     body = json.loads(request.data.decode())
     company = body.get('company')
     position = body.get('position')
@@ -129,9 +183,12 @@ def create_event(id, list_id):
 
 @app.route("/api/<int:id>/lists/<int:list_id>/events/<int:event_id>/")
 def get_event_by_id(id, list_id, event_id):
-    user = User.query.filter_by(id=id).first()
-    if user is None: 
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None: 
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     event_list = user.public_lists.filter_by(public_list_id = list_id).first()
     if event_list is None:
         return failure_response("list not found!")
@@ -146,6 +203,9 @@ def edit_event_by_id(id, list_id, event_id):
     user = User.query.filter_by(id=id).first()
     if user is None: 
         return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     event_list = user.public_lists.filter_by(public_list_id = list_id).first()
     if event_list is None:
         return failure_response("list not found!")
@@ -162,9 +222,12 @@ def edit_event_by_id(id, list_id, event_id):
 
 @app.route("/api/<int:id>/friends/add/", methods=['POST'])
 def add_friend(id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     body = json.loads(request.data.decode())
     search_id = body.get('id')
     if search_id is None:
@@ -186,9 +249,12 @@ def add_friend(id):
 
 @app.route("/api/<int:id>/friends/accept/<int:friend_id>/", methods=["POST"])
 def accept_friend_request(id, friend_id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     friend = User.query.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("friend user not found!")
@@ -202,9 +268,12 @@ def accept_friend_request(id, friend_id):
 
 @app.route("/api/<int:id>/friends/reject/<int:friend_id>/", methods=["POST"])
 def reject_friend_request(id, friend_id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     friend = User.query.filter_by(id=friend_id).first()
     if friend is None:
         return failure_response("friend user not found!")
@@ -217,9 +286,12 @@ def reject_friend_request(id, friend_id):
 
 @app.route("/api/<int:id>/friends/requests/")
 def get_requests(id):
-    user = User.query.filter_by(id=id).first()
-    if user is None:
-        return failure_response("user not found!")
+    # user = User.query.filter_by(id=id).first()
+    # if user is None:
+    #     return failure_response("user not found!")
+    success, user = check_session(request)
+    if not success:
+        return user
     return success_response({"requests": [f.serialize() for f in user.applying_friends]})
 
 if __name__ == "__main__":

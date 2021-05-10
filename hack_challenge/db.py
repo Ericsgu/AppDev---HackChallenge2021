@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+import hashlib, os, datetime
 
 db = SQLAlchemy()
 
@@ -46,8 +47,10 @@ class User(db.Model):
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
-        self.password = kwargs.get('password')
-
+        salt = os.urandom(32)
+        self.password = salt + hashlib.pbkdf2_hmac('sha256', kwargs.get('password').encode('utf-8'), salt, 100000)
+        self.renew_session()
+        
     def serialize(self):
         return {
             "id": self.id,
@@ -55,6 +58,30 @@ class User(db.Model):
             "friends": [f.serialize() for f in self.friends],
             "public_list": [pl.serialize() for pl in self.public_lists]
         }
+
+    # Session Token testing
+    session_token = db.Column(db.String, nullable=False, unique=True)
+    session_expiration = db.Column(db.DateTime, nullable=False)
+    update_token = db.Column(db.String, nullable=False, unique=True)
+
+    def verify_password(self, password):
+        salt = self.password[:32]
+        return self.password[32:] == hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    
+    def _urlsafe_base_64(self):
+        return hashlib.sha1(os.urandom(64)).hexdigest()
+
+    def renew_session(self):
+        self.session_token = self._urlsafe_base_64()
+        self.session_expiration = datetime.datetime.now() + datetime.timedelta(days=1)
+        self.update_token = self._urlsafe_base_64()
+    
+    def verify_session(self, session_token):
+        return session_token == self.session_token and datetime.datetime.now() < self.session_expiration
+    
+    def verify_update_token(self, update_token):
+        return update_token == self.update_token
+
 
 class PublicList(db.Model):
     __tablename__ = "public_list"
