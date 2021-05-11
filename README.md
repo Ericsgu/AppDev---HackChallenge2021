@@ -181,9 +181,9 @@ Response
   "data": [
     {
      "id": <ID>,
-      "company": <COMPANY>,
-      "position": <POSITION>,
-      "reminder": <REMINDER>
+      "main_title": <MAIN TITLE>,
+      "sub_title": <SUB TITLE>,
+      "in_progress": <IN PROGRESS>    
     }
   ]
 }
@@ -196,9 +196,9 @@ Response
 Request
 ```
 {
-  "company": <USER INPUT>,
-  "position": <USER INPUT>,
-  "reminder": <USER INPUT>
+  "main_title": <USER INPUT>,
+  "sub_title": <USER INPUT>,
+  "in_progress": <USER INPUT>    
 }
 ```
 Response
@@ -208,9 +208,9 @@ Response
   "data": [
     {
       "id": <ID>,
-      "company": <COMPANY>,
-      "position": <POSITION>,
-      "reminder": <REMINDER>    
+      "main_title": <MAIN TITLE>,
+      "sub_title": <SUB TITLE>,
+      "in_progress": <IN PROGRESS>    
     }
   ]
 }
@@ -318,9 +318,7 @@ Response
       "completed": <COMPLETED>,
       "date": <DATE>,
       "title": <TITLE>,
-      "event_id": <EVENT_ID>,
-      "event": <SERIALIZED Event>
-        
+      "event_id": <EVENT_ID>        
     }
   ]
 }
@@ -341,9 +339,7 @@ Response
       "completed": <COMPLETED>,
       "date": <DATE>,
       "title": <TITLE>,
-      "event_id": <EVENT_ID>,
-      "event": <SERIALIZED Event>
-        
+      "event_id": <EVENT_ID>        
     }
   ]
 }
@@ -372,9 +368,7 @@ Response
       "completed": <COMPLETED>,
       "date": <DATE>,
       "title": <TITLE>,
-      "event_id": <EVENT_ID>,
-      "event": <SERIALIZED Event>
-        
+      "event_id": <EVENT_ID>        
     }
   ]
 }
