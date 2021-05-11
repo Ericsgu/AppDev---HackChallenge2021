@@ -1,6 +1,6 @@
 import json
 import os
-from db import db, User, PublicList, Event, Image, User_PublicList_Association
+from db import db, User, PublicList, Event, Image, User_PublicList_Association, Item
 from flask import Flask
 from flask import request
 
@@ -186,12 +186,12 @@ def create_event(list_id):
     if public_list is None:
         return failure_response('list not found!')
     body = json.loads(request.data.decode())
-    company = body.get('company')
-    position = body.get('position')
-    reminder = body.get('reminder')
-    if not company or not position or not reminder:
+    main_title = body.get('main_title')
+    sub_title = body.get('sub_title')
+    in_progress = body.get('in_progress')
+    if main_title is None or sub_title is None or in_progress is None:
         return failure_response("missing field(s)!")
-    new_event = Event(company=company, position=position, reminder=reminder, public_list_id = list_id)
+    new_event = Event(main_title=main_title, sub_title=sub_title, in_progress=in_progress, public_list_id = list_id)
     public_list.events.append(new_event)
     db.session.add(new_event)
     db.session.commit()
@@ -224,9 +224,9 @@ def edit_event_by_id(list_id, event_id):
     if event is None:
             return failure_response("list not found!")
     body = json.loads(request.data.decode())
-    event.company = body.get('company', event.company)
-    event.position = body.get('position', event.position)
-    event.reminder = body.get('reminder', event.reminder)
+    event.main_title = body.get('main_title', event.main_title)
+    event.sub_title = body.get('sub_title', event.sub_title)
+    event.in_progress = body.get('in_progress', event.in_progress)
     db.session.commit()
     return success_response(event.serialize())
 
@@ -291,6 +291,69 @@ def get_requests():
     if not success:
         return user
     return success_response({"requests": [f.serialize() for f in user.applying_friends]})
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/item/", methods=["POST"])
+def create_item(list_id, event_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+        return failure_response("event not found!")
+    body = json.loads(request.data.decode())
+    completed = body.get('completed')
+    date = body.get('date')
+    title = body.get('title')
+    if completed is None or date is None or title is None:
+        return failure_response("missing field(s)!")
+    new_item = Item(completed=completed, date=date, title=title, event_id = event_id)
+    event.items.append(new_item)
+    db.session.add(new_item)
+    db.session.commit()
+    return success_response(new_item.serialize(), 201)
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>/")
+def get_item_by_id(list_id, event_id, item_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+        return failure_response("event not found!")
+    item = event.items.filter_by(id = item_id).first()
+    if item is None:
+        return failure_response("item not found!")
+    return success_response(item.serialize())
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>", methods=["POST"])
+def edit_item_by_id(list_id, event_id, item_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+            return failure_response("list not found!")
+    item = event.items.filter_by(id = item_id).first()
+    if item is None:
+        return failure_response("item not found!")
+    body = json.loads(request.data.decode())
+    item.completed = body.get('completed', item.completed)
+    item.date = body.get('date', item.date)
+    item.title = body.get('title', item.title)
+    db.session.commit()
+    return success_response(item.serialize())
 
 if __name__ == "__main__":
     port = os.environ.get('PORT', 5000)

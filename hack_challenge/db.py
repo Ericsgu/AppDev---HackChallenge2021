@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 import hashlib, os, datetime
+from enum import Enum
 
 db = SQLAlchemy()
 
@@ -19,6 +20,13 @@ list_events_association_table = db.Table(
     'list_events_association',
     db.Column('list_id', db.Integer, db.ForeignKey('public_list.id')),
     db.Column('event_id', db.Integer, db.ForeignKey('event.id'))
+)
+
+event_items_association_table = db.Table(
+    'event_items_association',
+        db.Column('event_id', db.Integer, db.ForeignKey('event.id')),
+        db.Column('item_id', db.Integer, db.ForeignKey('item.id'))
+
 )
 
 class User(db.Model):
@@ -124,23 +132,49 @@ class User_PublicList_Association(db.Model):
 class Event(db.Model):
     __tablename__ = "event"
     id = db.Column(db.Integer, primary_key=True)
-    company = db.Column(db.String, nullable=False)
-    position = db.Column(db.String, nullable=False)
-    reminder = db.Column(db.String, nullable=False)
+    main_title = db.Column(db.String, nullable=False)
+    sub_title = db.Column(db.String, nullable=False)
+    in_progress = db.Column(db.Boolean, nullable=False)
     public_list_id = db.Column(db.Integer, db.ForeignKey('public_list.id'))
+    items = db.relationship('Item', back_populates="event", cascade='delete', lazy='dynamic')
 
     def __init__(self, **kwargs):
-        self.company = kwargs.get('company')
-        self.position = kwargs.get('position')
-        self.reminder = kwargs.get('reminder')
+        self.main_title = kwargs.get('main_title')
+        self.sub_title = kwargs.get('sub_title')
+        self.in_progress = kwargs.get('in_progress')
         self.public_list_id=kwargs.get('public_list_id')
     
     def serialize(self):
         return {
             "id": self.id,
-            "company": self.company,
-            "position": self.position,
-            "reminder": self.reminder
+            "main_title": self.main_title,
+            "sub_title": self.sub_title,
+            "in_progress": self.in_progress,
+            "items":[i.serialize() for i in self.items]
+        }
+    
+class Item(db.Model):
+    __tablename__ = "item"
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
+    completed = db.Column(db.Boolean, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    title = db.Column(db.String, nullable=False)
+    event = db.relationship("Event", back_populates="items")
+
+    def __init__(self, **kwargs):
+        self.completed = kwargs.get('completed')
+        self.date = kwargs.get('date')
+        self.title = kwargs.get('title')
+        self.event_id=kwargs.get('event_id')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "event_id": self.event_id,
+            "completed": self.completed,
+            "date": self.date,
+            "title": self.title
         }
 
 class Image(db.Model):
