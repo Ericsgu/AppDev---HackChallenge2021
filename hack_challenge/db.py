@@ -59,7 +59,6 @@ class User(db.Model):
             "public_list": [pl.serialize() for pl in self.public_lists]
         }
 
-    # Session Token testing
     session_token = db.Column(db.String, nullable=False, unique=True)
     session_expiration = db.Column(db.DateTime, nullable=False)
     update_token = db.Column(db.String, nullable=False, unique=True)
@@ -73,7 +72,7 @@ class User(db.Model):
 
     def renew_session(self):
         self.session_token = self._urlsafe_base_64()
-        self.session_expiration = datetime.datetime.now() + datetime.timedelta(days=1)
+        self.session_expiration = datetime.datetime.now() + datetime.timedelta(days=1.5)
         self.update_token = self._urlsafe_base_64()
     
     def verify_session(self, session_token):

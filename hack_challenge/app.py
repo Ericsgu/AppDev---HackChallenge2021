@@ -64,7 +64,6 @@ def update_token():
         "update_token": user.update_token
     })
 
-
 @app.route("/api/register/", methods=["POST"])
 def register():
     body = json.loads(request.data.decode())
@@ -147,6 +146,36 @@ def create_list():
     db.session.add(association)
     db.session.commit()
     return success_response(new_list.serialize())
+
+@app.route("/api/lists/<int:list_id>/", methods=["POST"])
+def edit_list_by_id(list_id):
+    success, user = check_session()
+    if not success:
+        return user
+    public_list = user.public_lists.filter_by(public_list_id=list_id).first()
+    if public_list is None:
+        return failure_response("list not found!")
+    body = json.loads(request.data.decode())
+    public_list.is_public = body.get('is_public', public_list.is_public)
+    public_list = public_list.public_list
+    public_list.list_name = body.get('list_name', public_list.list_name)
+    db.session.commit()
+    return success_response(public_list.serialize())
+
+@app.route("/api/lists/<int:list_id>/delete/", methods=['DELETE'])
+def delete_list_by_id(list_id):
+    success, user = check_session()
+    if not success:
+        return user
+    delete_list = User_PublicList_Association.query.filter_by(user_id=user.id, public_list_id = list_id).first()
+    if delete_list is None:
+        return failure_response("list not found!")
+    public_list = delete_list.public_list
+    db.session.delete(public_list)
+    user.public_lists.remove(delete_list)
+    db.session.delete(delete_list)
+    db.session.commit()
+    return success_response(public_list.serialize())
 
 @app.route("/api/lists/<int:list_id>/events/", methods=["POST"])
 def create_event(list_id):
