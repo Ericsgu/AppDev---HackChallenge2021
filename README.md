@@ -97,7 +97,6 @@ Response
     {
      "id": <ID>,
      "list_name": <USER INPUT>, 
-     "is_public": <USER INPUT>,
      "events": [<SERIALIZED EVENT>, ...]    
      }
   ]
@@ -123,7 +122,6 @@ Response
     {
      "id": <ID>,
      "list_name": <USER INPUT>, 
-     "is_public": <USER INPUT>,
      "events": []
     }
   ]
