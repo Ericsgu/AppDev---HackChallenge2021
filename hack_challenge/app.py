@@ -44,8 +44,10 @@ def check_session():
     if not success: 
         return False, session_token
     user = get_user_by_session_token(session_token)
-    if user is None or not user.verify_session(session_token):
-        return False, failure_response("user not found or your session expired!")
+    if user is None:
+        return False, failure_response("user not found!")
+    if not user.verify_session(session_token):
+        return False, failure_response("invalid session token!")
     return True, user
 
 @app.route("/api/session/", methods=["POST"])
