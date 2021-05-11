@@ -1,6 +1,6 @@
 # AppDev---HackChallenge2021
 ## API Specification
-### Base Endpoint: letsdoit21.herokuapp.com
+### Base Endpoint: letsdoit2021.herokuapp.com
 
 ### 1) Register User
 
