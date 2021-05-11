@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
 import hashlib, os, datetime
-from enum import Enum
 
 db = SQLAlchemy()
 
@@ -26,7 +25,6 @@ event_items_association_table = db.Table(
     'event_items_association',
         db.Column('event_id', db.Integer, db.ForeignKey('event.id')),
         db.Column('item_id', db.Integer, db.ForeignKey('item.id'))
-
 )
 
 class User(db.Model):
@@ -35,7 +33,10 @@ class User(db.Model):
     name = db.Column(db.String(64), nullable=False)
     password = db.Column(db.String(128), nullable=False)
     public_lists = db.relationship("User_PublicList_Association", back_populates="user", lazy='dynamic')
-    
+    session_token = db.Column(db.String, nullable=False, unique=True)
+    session_expiration = db.Column(db.DateTime, nullable=False)
+    update_token = db.Column(db.String, nullable=False, unique=True)
+
     applying_friends = db.relationship(
         'User',
         secondary=applying_friends_association,
@@ -44,6 +45,7 @@ class User(db.Model):
         lazy='dynamic',
         backref=db.backref('applying_friends_association', lazy='dynamic')
     )
+
     friends = db.relationship(
         'User',
         secondary=friends_association,
@@ -67,10 +69,6 @@ class User(db.Model):
             "public_list": [pl.serialize() for pl in self.public_lists]
         }
 
-    session_token = db.Column(db.String, nullable=False, unique=True)
-    session_expiration = db.Column(db.DateTime, nullable=False)
-    update_token = db.Column(db.String, nullable=False, unique=True)
-
     def verify_password(self, password):
         salt = self.password[:32]
         return self.password[32:] == hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
@@ -88,7 +86,6 @@ class User(db.Model):
     
     def verify_update_token(self, update_token):
         return update_token == self.update_token
-
 
 class PublicList(db.Model):
     __tablename__ = "public_list"

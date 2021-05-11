@@ -106,15 +106,9 @@ def login():
         "update_token": user.update_token
     })
 
-@app.route("/api/friends_lists/")
-def get_friends_lists():
-    success, user = check_session()
-    if not success:
-        return user
-    return success_response({"friends": [f.serialize() for f in user.friends]})
-
+# List routes 
 @app.route("/api/lists/")
-def get_lists():
+def get_all_lists():
     success, user = check_session()
     if not success:
         return user
@@ -179,6 +173,31 @@ def delete_list_by_id(list_id):
     db.session.commit()
     return success_response(public_list.serialize())
 
+# Event routes
+@app.route("/api/lists/<int:list_id>/events/")
+def get_all_events(list_id):
+    success, user = check_session()
+    if not success:
+        return user
+    public_list = PublicList.query.filter_by(id=list_id).first()
+    if public_list is None:
+        return failure_response('list not found!')
+    return success_response({"events": [c.serialize() for c in public_list.events]})
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/")
+def get_event_by_id(list_id, event_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+            return failure_response("event not found!")
+    return success_response(event.serialize())
+
 @app.route("/api/lists/<int:list_id>/events/", methods=["POST"])
 def create_event(list_id):
     success, user = check_session()
@@ -199,20 +218,6 @@ def create_event(list_id):
     db.session.commit()
     return success_response(new_event.serialize(), 201)
 
-@app.route("/api/lists/<int:list_id>/events/<int:event_id>/")
-def get_event_by_id(list_id, event_id):
-    success, user = check_session()
-    if not success:
-        return user
-    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
-    if event_list is None:
-        return failure_response("list not found!")
-    event_list = event_list.public_list
-    event = event_list.events.filter_by(id = event_id).first()
-    if event is None:
-            return failure_response("list not found!")
-    return success_response(event.serialize())
-
 @app.route("/api/lists/<int:list_id>/events/<int:event_id>/", methods=["POST"])
 def edit_event_by_id(list_id, event_id):
     success, user = check_session()
@@ -224,7 +229,7 @@ def edit_event_by_id(list_id, event_id):
     event_list = event_list.public_list
     event = event_list.events.filter_by(id = event_id).first()
     if event is None:
-            return failure_response("list not found!")
+            return failure_response("event not found!")
     body = json.loads(request.data.decode())
     event.main_title = body.get('main_title', event.main_title)
     event.sub_title = body.get('sub_title', event.sub_title)
@@ -232,6 +237,24 @@ def edit_event_by_id(list_id, event_id):
     db.session.commit()
     return success_response(event.serialize())
 
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/delete/", methods=['DELETE'])
+def delete_event_by_id(list_id, event_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    delete_event = event_list.events.filter_by(id = event_id).first()
+    if delete_event is None:
+            return failure_response("event not found!")
+    event_list.events.remove(delete_event)
+    db.session.delete(delete_event)
+    db.session.commit()
+    return success_response(delete_event.serialize())
+
+# Friend routes
 @app.route("/api/friends/add/", methods=['POST'])
 def add_friend():
     success, user = check_session()
@@ -288,11 +311,50 @@ def reject_friend_request(friend_id):
     return success_response(friend.serialize())
 
 @app.route("/api/friends/requests/")
-def get_requests():
+def get_friend_requests():
     success, user = check_session()
     if not success:
         return user
     return success_response({"requests": [f.serialize() for f in user.applying_friends]})
+
+@app.route("/api/friends_lists/")
+def get_friends_lists():
+    success, user = check_session()
+    if not success:
+        return user
+    return success_response({"friends": [f.serialize() for f in user.friends]})
+
+# Item routes
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/")
+def get_all_items(list_id, event_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+        return failure_response("event not found!")
+    return success_response({"items": [i.serialize() for i in event.items]})
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>/")
+def get_item_by_id(list_id, event_id, item_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+        return failure_response("event not found!")
+    item = event.items.filter_by(id = item_id).first()
+    if item is None:
+        return failure_response("item not found!")
+    return success_response(item.serialize())
 
 @app.route("/api/lists/<int:list_id>/events/<int:event_id>/item/", methods=["POST"])
 def create_item(list_id, event_id):
@@ -318,24 +380,7 @@ def create_item(list_id, event_id):
     db.session.commit()
     return success_response(new_item.serialize(), 201)
 
-@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>/")
-def get_item_by_id(list_id, event_id, item_id):
-    success, user = check_session()
-    if not success:
-        return user
-    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
-    if event_list is None:
-        return failure_response("list not found!")
-    event_list = event_list.public_list
-    event = event_list.events.filter_by(id = event_id).first()
-    if event is None:
-        return failure_response("event not found!")
-    item = event.items.filter_by(id = item_id).first()
-    if item is None:
-        return failure_response("item not found!")
-    return success_response(item.serialize())
-
-@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>", methods=["POST"])
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>/", methods=["POST"])
 def edit_item_by_id(list_id, event_id, item_id):
     success, user = check_session()
     if not success:
@@ -346,7 +391,7 @@ def edit_item_by_id(list_id, event_id, item_id):
     event_list = event_list.public_list
     event = event_list.events.filter_by(id = event_id).first()
     if event is None:
-            return failure_response("list not found!")
+            return failure_response("event not found!")
     item = event.items.filter_by(id = item_id).first()
     if item is None:
         return failure_response("item not found!")
@@ -356,6 +401,26 @@ def edit_item_by_id(list_id, event_id, item_id):
     item.title = body.get('title', item.title)
     db.session.commit()
     return success_response(item.serialize())
+
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>/delete/", methods=['DELETE'])
+def delete_item_by_id(list_id, event_id, item_id):
+    success, user = check_session()
+    if not success:
+        return user
+    event_list = user.public_lists.filter_by(public_list_id = list_id).first()
+    if event_list is None:
+        return failure_response("list not found!")
+    event_list = event_list.public_list
+    event = event_list.events.filter_by(id = event_id).first()
+    if event is None:
+            return failure_response("event not found!")
+    delete_item = event.items.filter_by(id = item_id).first()
+    if delete_item is None:
+        return failure_response("item not found!")
+    event.items.remove(delete_item)
+    db.session.delete(delete_item)
+    db.session.commit()
+    return success_response(delete_item.serialize())
 
 if __name__ == "__main__":
     port = os.environ.get('PORT', 5000)
