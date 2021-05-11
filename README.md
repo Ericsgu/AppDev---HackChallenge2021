@@ -295,3 +295,86 @@ Response
 }
 ```
 
+### 15) Create an Item
+
+<code>POST</code> /api/<int:id>/lists/<int:list_id>/events/<int:event_id>/item/
+Request
+```
+{
+  "completed": <USER INPUT>,
+  "date": <USER INPUT>,
+  "title": <USER INPUT>,
+}
+```
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+     
+      "id": <ID>,
+      "completed": <COMPLETED>,
+      "date": <DATE>,
+      "title": <TITLE>,
+      "event_id": <EVENT_ID>,
+      "event": <SERIALIZED Event>
+        
+    }
+  ]
+}
+```
+
+### 16) Get Item from Specific List and Spefic Event by ID
+
+<code>GET</code> /api/<int:id>/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>
+
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+     
+      "id": <ID>,
+      "completed": <COMPLETED>,
+      "date": <DATE>,
+      "title": <TITLE>,
+      "event_id": <EVENT_ID>,
+      "event": <SERIALIZED Event>
+        
+    }
+  ]
+}
+```
+
+### 17) Edit Specific Event's Details
+
+<code>POST</code> /api/lists/{list_id}/events/{event_id}/
+
+Request
+```
+{
+  "completed": <USER INPUT>,
+  "date": <USER INPUT>,
+  "title": <USER INPUT>,
+}
+```
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+     
+      "id": <ID>,
+      "completed": <COMPLETED>,
+      "date": <DATE>,
+      "title": <TITLE>,
+      "event_id": <EVENT_ID>,
+      "event": <SERIALIZED Event>
+        
+    }
+  ]
+}
+```
