@@ -356,7 +356,7 @@ def get_item_by_id(list_id, event_id, item_id):
         return failure_response("item not found!")
     return success_response(item.serialize())
 
-@app.route("/api/lists/<int:list_id>/events/<int:event_id>/item/", methods=["POST"])
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/items/", methods=["POST"])
 def create_item(list_id, event_id):
     success, user = check_session()
     if not success:
