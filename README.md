@@ -348,9 +348,9 @@ Response
 }
 ```
 
-### 17) Edit Specific Event's Details
+### 17) Edit Specific Item's Details
 
-<code>POST</code> /api/lists/{list_id}/events/{event_id}/
+<code>POST</code> /api/<int:id>/lists/<int:list_id>/events/<int:event_id>/items/<int:item_id>
 
 Request
 ```
