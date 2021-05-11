@@ -20,10 +20,9 @@ Response
   "success": true,
   "data": [
     {
-      "id": <ID>,
-      "name": <NAME>,
-      "friends": [],
-      "public_lists": []
+      "session_token": <SESSION TOKEN>,
+      "session_expiration": <SESSION EXPIRATION>,
+      "update_token": <UPDATE TOKEN>
     }
   ]
 }
@@ -46,10 +45,9 @@ Response
   "success": true,
   "data": [
     {
-      "id": <ID>,
-      "name": <NAME>,
-      "friends": [<SERIALIZED FRIENDS>],
-      "public_lists": [<SERIALIZED PUBLIC LISTS>]
+      "session_token": <SESSION TOKEN>,
+      "session_expiration": <SESSION EXPIRATION>,
+      "update_token": <UPDATE TOKEN>
     }
   ]
 }
@@ -57,7 +55,7 @@ Response
 
 ### 3) Get Friends List
 
-<code>GET</code> /api/{id}/friends_lists/
+<code>GET</code> /api/friends_lists/
 
 Response
 ```
@@ -73,7 +71,7 @@ Response
 
 ### 4) Get User's Lists
 
-<code>GET</code> /api/{id}/lists/
+<code>GET</code> /api/lists/
 
 Response
 ```
@@ -89,7 +87,7 @@ Response
 
 ### 5) Get Specific List by List ID
 
-<code>GET</code> /api/{id}/lists/{list_id}/
+<code>GET</code> /api/lists/{list_id}/
 
 Response
 ```
@@ -108,7 +106,7 @@ Response
 
 ### 6) Create a List
 
-<code>POST</code> /api/{id}/lists/
+<code>POST</code> /api/lists/
 
 Request
 ```
@@ -134,7 +132,7 @@ Response
 
 ### 7) Get Event from Specific List by ID
 
-<code>GET</code> /api/{id}/lists/{list_id}/events/{event_id}/
+<code>GET</code> /api/lists/{list_id}/events/{event_id}/
 
 Response
 ```
@@ -153,7 +151,7 @@ Response
 
 ### 8) Edit Specific Event's Details
 
-<code>POST</code> /api/{id}/lists/{list_id}/events/{event_id}/
+<code>POST</code> /api/lists/{list_id}/events/{event_id}/
 
 Request
 ```
@@ -180,7 +178,7 @@ Response
 
 ### 9) Send a Friend Request
 
-<code>POST</code> /api/{id}/friends/add/
+<code>POST</code> /api/friends/add/
 
 Request
 ```
@@ -205,7 +203,7 @@ Response
 
 ### 10) Accept Friend Request from Friend ID
 
-<code>POST</code> /api/{id}/friends/accept/{friend_id}/
+<code>POST</code> /api/friends/accept/{friend_id}/
 
 Response
 ```
@@ -224,7 +222,7 @@ Response
 
 ### 11) Reject Friend Request from Friend ID
 
-<code>POST</code> /api/{id}/friends/reject/{friend_id}/
+<code>POST</code> /api/friends/reject/{friend_id}/
 
 Response
 ```
@@ -243,7 +241,7 @@ Response
 
 ### 12) Get Pending Requests
 
-<code>GET</code> /api/{id}/friends/requests/
+<code>GET</code> /api/friends/requests/
 
 Response
 ```
