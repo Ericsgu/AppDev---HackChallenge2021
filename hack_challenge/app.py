@@ -1,6 +1,5 @@
 import json
 import os
-import hashlib
 from db import db, User, PublicList, Event, Image, User_PublicList_Association
 from flask import Flask
 from flask import request
@@ -40,7 +39,7 @@ def extract_token(request):
         return False, failure_response("invalid auth header")
     return True, bearer_token
 
-def check_session(request):
+def check_session():
     success, session_token = extract_token(request)
     if not success: 
         return False, session_token
@@ -86,7 +85,7 @@ def register():
         "update_token": new_user.update_token
     })
 
-@app.route("/api/login/", methods=['POST'])
+@app.route("/api/login/", methods=["POST"])
 def login():
     body = json.loads(request.data.decode())
     name = body.get('name')
@@ -106,32 +105,23 @@ def login():
         "update_token": user.update_token
     })
 
-@app.route("/api/<int:id>/friends_lists/")
-def get_friends_lists(id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/friends_lists/")
+def get_friends_lists():
+    success, user = check_session()
     if not success:
         return user
     return success_response({"friends": [f.serialize() for f in user.friends]})
 
-@app.route("/api/<int:id>/lists/")
-def get_lists(id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/lists/")
+def get_lists():
+    success, user = check_session()
     if not success:
         return user
     return success_response({"lists": [c.serialize() for c in user.public_lists if c.is_public]})
 
-@app.route("/api/<int:id>/lists/<int:list_id>/")
-def get_list_by_id(id, list_id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/lists/<int:list_id>/")
+def get_list_by_id(list_id):
+    success, user = check_session()
     if not success:
         return user
     public_list = user.public_lists.filter_by(public_list_id=list_id).first()
@@ -139,31 +129,28 @@ def get_list_by_id(id, list_id):
         return failure_response("list not found!")
     return success_response(public_list.serialize())
 
-@app.route("/api/<int:id>/lists/", methods=['POST'])
-def create_list(id):
+@app.route("/api/lists/", methods=['POST'])
+def create_list():
     body = json.loads(request.data.decode())
     list_name = body.get('list_name')
     is_public = body.get('is_public')
     if is_public is None or list_name is None:
         return failure_response("Please provide access information/name of list")
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+    success, user = check_session()
     if not success:
         return user
-    new_list = PublicList(list_name=list_name, publisher_id=id)
+    new_list = PublicList(list_name=list_name, publisher_id=user.id)
     db.session.add(new_list)
-    association = User_PublicList_Association(user_id=id, is_public=is_public)
+    association = User_PublicList_Association(user_id=user.id, is_public=is_public)
     association.public_list = new_list
     user.public_lists.append(association)
     db.session.add(association)
     db.session.commit()
     return success_response(new_list.serialize())
 
-@app.route("/api/<int:id>/lists/<int:list_id>/events/", methods=["POST"])
-def create_event(id, list_id):
-    success, user = check_session(request)
+@app.route("/api/lists/<int:list_id>/events/", methods=["POST"])
+def create_event(list_id):
+    success, user = check_session()
     if not success:
         return user
     public_list = PublicList.query.filter_by(id=list_id).first()
@@ -181,12 +168,9 @@ def create_event(id, list_id):
     db.session.commit()
     return success_response(new_event.serialize(), 201)
 
-@app.route("/api/<int:id>/lists/<int:list_id>/events/<int:event_id>/")
-def get_event_by_id(id, list_id, event_id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None: 
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/")
+def get_event_by_id(list_id, event_id):
+    success, user = check_session()
     if not success:
         return user
     event_list = user.public_lists.filter_by(public_list_id = list_id).first()
@@ -198,12 +182,9 @@ def get_event_by_id(id, list_id, event_id):
             return failure_response("list not found!")
     return success_response(event.serialize())
 
-@app.route("/api/<int:id>/lists/<int:list_id>/events/<int:event_id>/", methods=["POST"])
-def edit_event_by_id(id, list_id, event_id):
-    user = User.query.filter_by(id=id).first()
-    if user is None: 
-        return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/lists/<int:list_id>/events/<int:event_id>/", methods=["POST"])
+def edit_event_by_id(list_id, event_id):
+    success, user = check_session()
     if not success:
         return user
     event_list = user.public_lists.filter_by(public_list_id = list_id).first()
@@ -220,12 +201,9 @@ def edit_event_by_id(id, list_id, event_id):
     db.session.commit()
     return success_response(event.serialize())
 
-@app.route("/api/<int:id>/friends/add/", methods=['POST'])
-def add_friend(id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/friends/add/", methods=['POST'])
+def add_friend():
+    success, user = check_session()
     if not success:
         return user
     body = json.loads(request.data.decode())
@@ -247,12 +225,9 @@ def add_friend(id):
     db.session.commit()
     return success_response(search_user.serialize())
 
-@app.route("/api/<int:id>/friends/accept/<int:friend_id>/", methods=["POST"])
-def accept_friend_request(id, friend_id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/friends/accept/<int:friend_id>/", methods=["POST"])
+def accept_friend_request(friend_id):
+    success, user = check_session()
     if not success:
         return user
     friend = User.query.filter_by(id=friend_id).first()
@@ -266,12 +241,9 @@ def accept_friend_request(id, friend_id):
     db.session.commit()
     return success_response(friend.serialize())
 
-@app.route("/api/<int:id>/friends/reject/<int:friend_id>/", methods=["POST"])
-def reject_friend_request(id, friend_id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/friends/reject/<int:friend_id>/", methods=["POST"])
+def reject_friend_request(friend_id):
+    success, user = check_session()
     if not success:
         return user
     friend = User.query.filter_by(id=friend_id).first()
@@ -284,12 +256,9 @@ def reject_friend_request(id, friend_id):
     db.session.commit()
     return success_response(friend.serialize())
 
-@app.route("/api/<int:id>/friends/requests/")
-def get_requests(id):
-    # user = User.query.filter_by(id=id).first()
-    # if user is None:
-    #     return failure_response("user not found!")
-    success, user = check_session(request)
+@app.route("/api/friends/requests/")
+def get_requests():
+    success, user = check_session()
     if not success:
         return user
     return success_response({"requests": [f.serialize() for f in user.applying_friends]})
