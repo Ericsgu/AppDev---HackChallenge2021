@@ -130,7 +130,47 @@ Response
 }
 ```
 
-### 7) Get Event from Specific List by ID
+### 7) Delete List by List ID
+<code> DELETE </code> /api/lists/{list_id}/delete/
+
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+     "id": <ID>,
+     "list_name": <USER INPUT>, 
+     "events": [<SERIALIZED EVENT>, ...]
+    }
+  ]
+}
+```
+
+### 8) Edit List by List ID
+<code> POST </code> /api/lists/{list_id}/
+
+Request
+```
+{
+  "list_name": <USER INPUT>
+  "is_public": <USER INPUT>
+```
+Response
+```
+{
+  "success": true,
+  "data": [
+    {
+     "id": <ID>,
+     "list_name": <USER INPUT>, 
+     "events": [<SERIALIZED EVENT>, ...]
+    }
+  ]
+}
+```
+
+### 9) Get Event from Specific List by ID
 
 <code>GET</code> /api/lists/{list_id}/events/{event_id}/
 
@@ -149,7 +189,7 @@ Response
 }
 ```
 
-### 8) Edit Specific Event's Details
+### 10) Edit Specific Event's Details
 
 <code>POST</code> /api/lists/{list_id}/events/{event_id}/
 
@@ -176,7 +216,7 @@ Response
 }
 ```
 
-### 9) Send a Friend Request
+### 11) Send a Friend Request
 
 <code>POST</code> /api/friends/add/
 
@@ -201,7 +241,7 @@ Response
 }
 ```
 
-### 10) Accept Friend Request from Friend ID
+### 12) Accept Friend Request from Friend ID
 
 <code>POST</code> /api/friends/accept/{friend_id}/
 
@@ -220,7 +260,7 @@ Response
 }
 ```
 
-### 11) Reject Friend Request from Friend ID
+### 13) Reject Friend Request from Friend ID
 
 <code>POST</code> /api/friends/reject/{friend_id}/
 
@@ -239,7 +279,7 @@ Response
 }
 ```
 
-### 12) Get Pending Requests
+### 14) Get Pending Requests
 
 <code>GET</code> /api/friends/requests/
 
@@ -254,3 +294,4 @@ Response
   ]
 }
 ```
+
