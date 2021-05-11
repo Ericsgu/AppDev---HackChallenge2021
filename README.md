@@ -298,6 +298,7 @@ Response
 ### 15) Create an Item
 
 <code>POST</code> /api/<int:id>/lists/<int:list_id>/events/<int:event_id>/item/
+
 Request
 ```
 {
