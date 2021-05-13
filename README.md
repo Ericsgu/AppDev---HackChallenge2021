@@ -346,7 +346,12 @@ Response
     "event_id": <EVENT ID>,
     "completed": <COMPLETED>,
     "date": <DATE>,
-    "title": <TITLE>
+    "title": <TITLE>, 
+    "event": {
+      "id": <EVENT ID>,
+      "main_title": <MAIN TITLE>,
+      "sub_title": <SUB TITLE>,
+      "in_progress": <IN PROGRESS>
   }
 }
 ```
