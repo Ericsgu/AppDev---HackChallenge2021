@@ -119,13 +119,6 @@ class User_PublicList_Association(db.Model):
         self.user_id = kwargs.get('user_id')
         self.is_public = kwargs.get('is_public')
 
-    def serialize(self):
-        return {
-            "user_id": self.user_id,
-            "public_list_id": self.public_list_id,
-            "public_list": self.public_list.serialize()
-        }
-
 class Event(db.Model):
     __tablename__ = "event"
     id = db.Column(db.Integer, primary_key=True)
@@ -149,6 +142,14 @@ class Event(db.Model):
             "in_progress": self.in_progress,
             "items":[i.serialize() for i in self.items]
         }
+
+    def item_serialize(self):
+        return {
+            "id": self.id, 
+            "main_title": self.main_title,
+            "sub_title": self.sub_title,
+            "in_progress": self.in_progress       
+        }
     
 class Item(db.Model):
     __tablename__ = "item"
@@ -171,7 +172,8 @@ class Item(db.Model):
             "event_id": self.event_id,
             "completed": self.completed,
             "date": self.date,
-            "title": self.title
+            "title": self.title,
+            "event": self.event.item_serialize()
         }
 
 class Image(db.Model):

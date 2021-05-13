@@ -2,6 +2,6 @@ version: '3'
 
 services:
   letsdoit:
-    image: letsdoit:v3
+    image: letsdoit:v6
     ports:
       - "5000:5000"

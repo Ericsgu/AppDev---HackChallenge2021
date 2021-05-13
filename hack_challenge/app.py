@@ -112,7 +112,7 @@ def get_all_lists():
     success, user = check_session()
     if not success:
         return user
-    return success_response({"lists": [c.serialize() for c in user.public_lists if c.is_public]})
+    return success_response({"lists": [c.public_list.serialize() for c in user.public_lists if c.is_public]})
 
 @app.route("/api/lists/<int:list_id>/")
 def get_list_by_id(list_id):
@@ -122,7 +122,7 @@ def get_list_by_id(list_id):
     public_list = user.public_lists.filter_by(public_list_id=list_id).first()
     if public_list is None:
         return failure_response("list not found!")
-    return success_response(public_list.serialize())
+    return success_response(public_list.public_list.serialize())
 
 @app.route("/api/lists/", methods=['POST'])
 def create_list():
